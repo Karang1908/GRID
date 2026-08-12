@@ -97,16 +97,13 @@ export function getFloorY(x, z, currentY, terrainY, walkableSurfaces) {
         surfY = s.startY + xFraction * (s.endY - s.startY);
       }
     } else if (s.type === 'spiral') {
-      // Continuous helical mathematical spiral surface
+      // Legacy spiral staircase surface — no longer used but kept for compatibility
       const dx = x - s.cx;
       const dz = z - s.cz;
       const distSq = dx * dx + dz * dz;
       if (distSq < s.rMin * s.rMin || distSq > s.rMax * s.rMax) continue;
-
-      // Angle from 0 to 2PI
-      let angle = Math.atan2(dx, dz); // -PI to PI
-      if (angle < 0) angle += Math.PI * 2; // 0 to 2PI
-
+      let angle = Math.atan2(dx, dz);
+      if (angle < 0) angle += Math.PI * 2;
       surfY = s.startY + (angle / (Math.PI * 2)) * s.floorH;
     }
 
