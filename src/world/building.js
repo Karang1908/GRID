@@ -30,6 +30,7 @@ const neonOrangeMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
 const neonGreenMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
 const waterTowerWoodMat = new THREE.MeshStandardMaterial({ color: 0x5a4230, roughness: 0.9 });
 const concreteFloorMat = new THREE.MeshStandardMaterial({ color: 0x2c2e35, roughness: 0.7 });
+const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.95, roughness: 0.1 });
 
 function makeBox(group, mat, x, y, z, w, h, d, rx = 0, ry = 0, rz = 0) {
   const mesh = new THREE.Mesh(boxGeom, mat);
