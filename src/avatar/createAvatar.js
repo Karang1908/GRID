@@ -81,7 +81,15 @@ function createNametagSprite(name = 'Player', tintColor = 0x4f86f7) {
   };
 }
 
-export function createAvatar(tintColor = 0x4f86f7, initialName = 'Player') {
+export function createAvatar(tintColorOrOptions = 0x4f86f7, initialName = 'Player') {
+  let tintColor = tintColorOrOptions;
+  let name = initialName;
+
+  if (typeof tintColorOrOptions === 'object' && tintColorOrOptions !== null) {
+    tintColor = tintColorOrOptions.color !== undefined ? tintColorOrOptions.color : 0x4f86f7;
+    name = tintColorOrOptions.name || initialName;
+  }
+
   const tintMat = new THREE.MeshStandardMaterial({
     color: tintColor,
     roughness: 0.6,
