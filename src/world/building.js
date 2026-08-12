@@ -176,8 +176,8 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
         const rightRoomX = bx + bWidth / 2 - 4.0;
 
         if (r === 0) {
-          // ROOM 1: Living Room with Interactive TV & Drawers
-          createSofa(leftRoomX, y + 0.2, rz + 1.2, 0, group, colliders, rand);
+          // ROOM 1: Living Room with Interactive TV & Drawers & Sofa
+          createSofa(leftRoomX, y + 0.2, rz + 1.2, 0, group, colliders, rand, null, interactionManager);
           createTVUnit(leftRoomX, y + 0.2, rz - 2.4, Math.PI, group, colliders, rand, interactionManager);
           createCupboardWithDrawers(bx - bWidth / 2 + 1.2, y + 0.2, rz, Math.PI / 2, group, colliders, rand, interactionManager);
           createPottedPlant(leftRoomX + 2.2, y + 0.2, rz + 2.0, group);
@@ -189,16 +189,16 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
           createTVUnit(rightRoomX, y + 0.2, rz + 2.4, 0, group, colliders, rand, interactionManager);
           createCeilingLight(rightRoomX, y + wallH - 0.1, rz, group);
         } else {
-          // ROOM 3: Executive Office
-          createOfficeSuite(leftRoomX, y + 0.2, rz, 0, group, colliders, rand);
+          // ROOM 3: Executive Office with Interactive Workstation
+          createOfficeSuite(leftRoomX, y + 0.2, rz, 0, group, colliders, rand, interactionManager);
           createCupboardWithDrawers(bx - bWidth / 2 + 1.2, y + 0.2, rz - 1.2, Math.PI / 2, group, colliders, rand, interactionManager);
           createPottedPlant(leftRoomX + 2.2, y + 0.2, rz + 2.0, group);
           createCeilingLight(leftRoomX, y + wallH - 0.1, rz, group);
 
-          // ROOM 4: Kitchenette & Dining
-          createKitchenette(rightRoomX - 0.5, y + 0.2, rz - 1.6, 0, group, colliders, rand);
+          // ROOM 4: Kitchenette & Dining with Interactive Sofa & Coffee
+          createKitchenette(rightRoomX - 0.5, y + 0.2, rz - 1.6, 0, group, colliders, rand, interactionManager);
           createCupboardWithDrawers(bx + bWidth / 2 - 1.2, y + 0.2, rz + 1.2, -Math.PI / 2, group, colliders, rand, interactionManager);
-          createSofa(rightRoomX, y + 0.2, rz + 1.6, Math.PI, group, colliders, rand);
+          createSofa(rightRoomX, y + 0.2, rz + 1.6, Math.PI, group, colliders, rand, null, interactionManager);
           createCeilingLight(rightRoomX, y + wallH - 0.1, rz, group);
         }
       }
@@ -357,14 +357,29 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     rimMesh.position.set(bx, y + 0.2, bz);
     group.add(rimMesh);
     
-    // Solid flat walkable surfaces on all floors (no holes — elevator is enclosed)
+    // Walkable surfaces with shaft cutout on upper floors
     if (walkableSurfaces) {
-      walkableSurfaces.push({
-        type: 'flat',
-        y: y + 0.2,
-        minX: bx - radius, maxX: bx + radius,
-        minZ: bz - radius, maxZ: bz + radius
-      });
+      if (f === 0) {
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx - radius, maxX: bx + radius,
+          minZ: bz - radius, maxZ: bz + radius
+        });
+      } else {
+        const eHw = elevator.cabinWidth / 2 + 0.3;
+        const eHd = elevator.cabinDepth / 2 + 0.3;
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx - radius, maxX: bx + radius,
+          minZ: bz - radius, maxZ: bz + radius,
+          holeMinX: elevator.shaftX - eHw,
+          holeMaxX: elevator.shaftX + eHw,
+          holeMinZ: elevator.shaftZ - eHd,
+          holeMaxZ: elevator.shaftZ + eHd
+        });
+      }
     }
 
     // -------------------------------------------------------------------------
@@ -450,6 +465,20 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
         screen.position.set(bx + m * 2.2, floorY + 1.9, bz + 11.55);
         screen.scale.set(1.25, 0.75, 0.02);
         group.add(screen);
+
+        if (interactionManager) {
+          let checkedIn = false;
+          interactionManager.register({
+            type: 'terminal',
+            position: new THREE.Vector3(bx + m * 2.2, floorY + 1.9, bz + 11.6),
+            radius: 2.6,
+            getPrompt: () => checkedIn ? 'HOLD E: VIEW DIRECTORY' : 'HOLD E: CHECK IN VISITOR',
+            onInteract: () => {
+              checkedIn = !checkedIn;
+              screen.material = checkedIn ? new THREE.MeshBasicMaterial({ color: 0x00ff88 }) : new THREE.MeshBasicMaterial({ color: 0x1a3355 });
+            }
+          });
+        }
       }
 
       // Desk lamp
@@ -465,6 +494,20 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       lampShade.position.set(bx + 0, floorY + 2.35, bz + 11.4);
       lampShade.scale.set(0.2, 0.15, 0.2);
       group.add(lampShade);
+
+      if (interactionManager) {
+        let lampOn = true;
+        interactionManager.register({
+          type: 'lamp',
+          position: new THREE.Vector3(bx, floorY + 1.9, bz + 11.4),
+          radius: 2.5,
+          getPrompt: () => lampOn ? 'HOLD E: TOGGLE DESK LAMP (OFF)' : 'HOLD E: TOGGLE DESK LAMP (ON)',
+          onInteract: () => {
+            lampOn = !lampOn;
+            lampShade.material = lampOn ? new THREE.MeshBasicMaterial({ color: 0xffeebb }) : new THREE.MeshStandardMaterial({ color: 0x332211 });
+          }
+        });
+      }
       
       // Logo Sign behind reception
       const logoSign = new THREE.Mesh(boxGeom, goldTrimMat);
@@ -472,22 +515,12 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       logoSign.scale.set(5.0, 1.5, 0.1);
       group.add(logoSign);
 
-      // "ELEVATOR" direction sign
-      const elevSign = new THREE.Mesh(boxGeom, new THREE.MeshStandardMaterial({ color: 0x1a1c22, roughness: 0.3 }));
-      elevSign.position.set(elevator.shaftX, floorY + 3.5, elevator.shaftZ + elevator.shaftRadius + 0.5);
-      elevSign.scale.set(2.5, 0.6, 0.08);
-      group.add(elevSign);
-      const elevText = new THREE.Mesh(boxGeom, neonBlueMat);
-      elevText.position.set(elevator.shaftX, floorY + 3.5, elevator.shaftZ + elevator.shaftRadius + 0.56);
-      elevText.scale.set(2.0, 0.35, 0.02);
-      group.add(elevText);
-
-      // East & West Waiting Lounges with Interactive TVs & Cupboards
-      createSofa(bx - 12, floorY, bz, Math.PI / 2, group, colliders, null, new THREE.Color(0x223355));
+      // East & West Waiting Lounges with Interactive TVs, Cupboards & Sofas
+      createSofa(bx - 12, floorY, bz, Math.PI / 2, group, colliders, null, new THREE.Color(0x223355), interactionManager);
       createTVUnit(bx - 15, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx - 12, floorY, bz - 6, 0, group, colliders, null, interactionManager);
 
-      createSofa(bx + 12, floorY, bz, -Math.PI / 2, group, colliders, null, new THREE.Color(0x553322));
+      createSofa(bx + 12, floorY, bz, -Math.PI / 2, group, colliders, null, new THREE.Color(0x553322), interactionManager);
       createTVUnit(bx + 15, floorY, bz, -Math.PI / 2, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx + 12, floorY, bz - 6, 0, group, colliders, null, interactionManager);
 
@@ -496,7 +529,6 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       createPottedPlant(bx + 8, floorY, bz + 9, group);
       createPottedPlant(bx - 8, floorY, bz - 9, group);
       createPottedPlant(bx + 8, floorY, bz - 9, group);
-      // More palms near entrances
       createPottedPlant(bx - 14, floorY, bz + 14, group);
       createPottedPlant(bx + 14, floorY, bz + 14, group);
 
@@ -526,12 +558,12 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       // -----------------------------------------------------------------------
       // FLOOR 14: 360° SKYLINE OBSERVATION LOUNGE & VIP PENTHOUSE
       // -----------------------------------------------------------------------
-      createSofa(bx - 11, floorY, bz + 5, Math.PI / 4, group, colliders, null, new THREE.Color(0x882233));
+      createSofa(bx - 11, floorY, bz + 5, Math.PI / 4, group, colliders, null, new THREE.Color(0x882233), interactionManager);
       createTVUnit(bx - 14, floorY, bz + 8, Math.PI / 4, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx - 12, floorY, bz - 5, Math.PI / 2, group, colliders, null, interactionManager);
       
       createBedroomSuite(bx + 11, floorY, bz + 5, -Math.PI / 4, group, colliders, null, interactionManager);
-      createKitchenette(bx + 9, floorY, bz - 8, Math.PI, group, colliders, null);
+      createKitchenette(bx + 9, floorY, bz - 8, Math.PI, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx + 12, floorY, bz - 3, -Math.PI / 2, group, colliders, null, interactionManager);
 
       createPottedPlant(bx - 12, floorY, bz + 11, group);
@@ -541,11 +573,11 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       // -----------------------------------------------------------------------
       // ODD MID FLOORS: CYBER TECH COMMAND & INNOVATION LABS
       // -----------------------------------------------------------------------
-      createOfficeSuite(bx - 11, floorY, bz, Math.PI / 2, group, colliders, null);
+      createOfficeSuite(bx - 11, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createTVUnit(bx - 14, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx - 10, floorY, bz - 6, 0, group, colliders, null, interactionManager);
 
-      createOfficeSuite(bx + 11, floorY, bz, -Math.PI / 2, group, colliders, null);
+      createOfficeSuite(bx + 11, floorY, bz, -Math.PI / 2, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx + 10, floorY, bz - 6, 0, group, colliders, null, interactionManager);
       createPottedPlant(bx + 12, floorY, bz + 6, group);
 
@@ -553,7 +585,7 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       // -----------------------------------------------------------------------
       // EVEN MID FLOORS: EXECUTIVE VIP SUITES & RELAXATION LOUNGES
       // -----------------------------------------------------------------------
-      createSofa(bx - 11, floorY, bz, Math.PI / 2, group, colliders, null);
+      createSofa(bx - 11, floorY, bz, Math.PI / 2, group, colliders, null, null, interactionManager);
       createTVUnit(bx - 14, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createCupboardWithDrawers(bx - 10, floorY, bz + 6, Math.PI, group, colliders, null, interactionManager);
 
