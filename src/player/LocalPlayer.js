@@ -131,6 +131,10 @@ export class LocalPlayer {
     };
   }
 
+  getState() {
+    return this.snapshot();
+  }
+
   dispose() {
     this.avatar.root.parent && this.avatar.root.parent.remove(this.avatar.root);
     this.avatar.dispose();
