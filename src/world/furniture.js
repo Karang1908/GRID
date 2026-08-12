@@ -304,9 +304,9 @@ export function createTVUnit(x, y, z, rotY = 0, parentGroup, colliders, rand, in
 }
 
 // -----------------------------------------------------------------------------
-// 3. PLUSH SOFA & COFFEE TABLE
+// 3. PLUSH SOFA & COFFEE TABLE (INTERACTIVE: SIT & RELAX)
 // -----------------------------------------------------------------------------
-export function createSofa(x, y, z, rotY = 0, parentGroup, colliders, rand, fabricColor = null) {
+export function createSofa(x, y, z, rotY = 0, parentGroup, colliders, rand, fabricColor = null, interactionManager = null) {
   const group = new THREE.Group();
   group.position.set(x, y, z);
   group.rotation.y = rotY;
@@ -347,6 +347,18 @@ export function createSofa(x, y, z, rotY = 0, parentGroup, colliders, rand, fabr
 
   parentGroup.add(group);
 
+  if (interactionManager) {
+    interactionManager.register({
+      type: 'sofa',
+      position: new THREE.Vector3(x, y + 0.5, z),
+      radius: 2.8,
+      getPrompt: () => 'HOLD E: SIT ON SOFA',
+      onInteract: (player, mgr) => {
+        mgr.sitOnSeat(player, { position: new THREE.Vector3(x, y + 0.5, z), facing: rotY });
+      }
+    });
+  }
+
   if (colliders) {
     colliders.push({
       type: 'box',
@@ -358,9 +370,9 @@ export function createSofa(x, y, z, rotY = 0, parentGroup, colliders, rand, fabr
 }
 
 // -----------------------------------------------------------------------------
-// 4. EXECUTIVE OFFICE SUITE
+// 4. EXECUTIVE OFFICE SUITE (INTERACTIVE WORKSTATION)
 // -----------------------------------------------------------------------------
-export function createOfficeSuite(x, y, z, rotY = 0, parentGroup, colliders, rand) {
+export function createOfficeSuite(x, y, z, rotY = 0, parentGroup, colliders, rand, interactionManager = null) {
   const group = new THREE.Group();
   group.position.set(x, y, z);
   group.rotation.y = rotY;
@@ -397,6 +409,20 @@ export function createOfficeSuite(x, y, z, rotY = 0, parentGroup, colliders, ran
   group.add(shelfGroup);
 
   parentGroup.add(group);
+
+  if (interactionManager) {
+    let mode = 0;
+    interactionManager.register({
+      type: 'workstation',
+      position: new THREE.Vector3(x, y + 0.7, z),
+      radius: 2.6,
+      getPrompt: () => mode % 2 === 0 ? 'HOLD E: USE WORKSTATION' : 'HOLD E: RUN NETWORK SCAN',
+      onInteract: (player, mgr) => {
+        mode++;
+        mgr.sitOnSeat(player, { position: new THREE.Vector3(x, y + 0.6, z), facing: rotY });
+      }
+    });
+  }
 
   if (colliders) {
     colliders.push({
@@ -468,9 +494,9 @@ export function createBedroomSuite(x, y, z, rotY = 0, parentGroup, colliders, ra
 }
 
 // -----------------------------------------------------------------------------
-// 6. MODERN KITCHENETTE
+// 6. MODERN KITCHENETTE (INTERACTIVE COFFEE STATION & FRIDGE)
 // -----------------------------------------------------------------------------
-export function createKitchenette(x, y, z, rotY = 0, parentGroup, colliders, rand) {
+export function createKitchenette(x, y, z, rotY = 0, parentGroup, colliders, rand, interactionManager = null) {
   const group = new THREE.Group();
   group.position.set(x, y, z);
   group.rotation.y = rotY;
@@ -492,6 +518,19 @@ export function createKitchenette(x, y, z, rotY = 0, parentGroup, colliders, ran
   makeBox(group, metalChromeMat, fridgeX, fridgeH / 2, 0, fridgeW, fridgeH, fridgeD);
 
   parentGroup.add(group);
+
+  if (interactionManager) {
+    let coffeeCount = 0;
+    interactionManager.register({
+      type: 'kitchen',
+      position: new THREE.Vector3(x, y + 1.2, z),
+      radius: 2.6,
+      getPrompt: () => coffeeCount % 2 === 0 ? 'HOLD E: BREW ESPRESSO' : 'HOLD E: DRINK ESPRESSO',
+      onInteract: () => {
+        coffeeCount++;
+      }
+    });
+  }
 
   if (colliders) {
     colliders.push({
