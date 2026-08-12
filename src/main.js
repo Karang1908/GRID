@@ -20,6 +20,7 @@ import { RemotePlayer } from './player/RemotePlayer.js';
 import { NetworkClient } from './net/NetworkClient.js';
 import { BreakableTreeManager } from './world/breakableTrees.js';
 import { InteractionManager } from './world/interactions.js';
+import { FLOOR_INFO } from './world/elevator.js';
 
 const SEND_INTERVAL_MS = 100; // 10 Hz outbound state
 
@@ -36,6 +37,9 @@ const promptText = interactPrompt?.querySelector('.text');
 const interactProgress = interactPrompt?.querySelector('.progress');
 const speedometer = document.getElementById('speedometer');
 const speedValue = document.getElementById('speed-value');
+const elevatorUI = document.getElementById('elevator-ui');
+const elevatorFloorsContainer = document.getElementById('elevator-floors');
+const elevatorCurrentFloorEl = document.getElementById('elevator-current-floor');
 
 // Restore saved username if present
 const savedName = localStorage.getItem('grid_player_name');
@@ -58,8 +62,58 @@ const interactionManager = new InteractionManager();
 
 const { heightAt } = createWorld(scene);
 scatterProps(scene, heightAt, colliders, treeManager);
-createCity(scene, heightAt, colliders, walkableSurfaces, treeManager, interactionManager);
+const { elevator } = createCity(scene, heightAt, colliders, walkableSurfaces, treeManager, interactionManager);
 createCampsite(scene, heightAt, colliders);
+
+// --- Elevator UI Setup --------------------------------------------------------
+let elevatorUIVisible = false;
+
+function buildElevatorUI(currentFloor) {
+  if (!elevatorFloorsContainer) return;
+  elevatorFloorsContainer.innerHTML = '';
+  for (const fi of FLOOR_INFO) {
+    const btn = document.createElement('button');
+    btn.className = 'elevator-floor-btn' + (fi.num === currentFloor ? ' current' : '');
+    btn.innerHTML = `<span class="floor-num">${fi.num}</span>${fi.name}`;
+    btn.addEventListener('click', () => {
+      if (elevator) elevator.goToFloor(fi.num);
+    });
+    elevatorFloorsContainer.appendChild(btn);
+  }
+  if (elevatorCurrentFloorEl) elevatorCurrentFloorEl.textContent = currentFloor;
+}
+
+function showElevatorUI(currentFloor) {
+  elevatorUIVisible = true;
+  buildElevatorUI(currentFloor);
+  if (elevatorUI) elevatorUI.classList.add('visible');
+  // Release pointer lock so user can click buttons
+  if (document.pointerLockElement) {
+    document.exitPointerLock();
+  }
+}
+
+function hideElevatorUI() {
+  elevatorUIVisible = false;
+  if (elevatorUI) elevatorUI.classList.remove('visible');
+  // Re-acquire pointer lock
+  pointerLock.requestLock();
+}
+
+if (elevator) {
+  elevator.onShowUI = showElevatorUI;
+  elevator.onHideUI = hideElevatorUI;
+}
+
+// ESC key closes elevator UI
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && elevatorUIVisible) {
+    if (elevator) {
+      elevator.state = 'IDLE';
+    }
+    hideElevatorUI();
+  }
+});
 
 // Spawn 4 cars near the campsite
 const cars = [];
@@ -261,6 +315,11 @@ function animate(now) {
 
   // Update dynamic physics particles and falling trees
   treeManager.update(dt);
+
+  // Update elevator
+  if (elevator) {
+    elevator.update(dt, localPlayer);
+  }
 
   // Update camera rig
   rig.update(localPlayer.position, yaw, pitch, !!localPlayer.vehicle);
