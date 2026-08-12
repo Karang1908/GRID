@@ -88,11 +88,12 @@ export function createCity(scene, heightAt, colliders, walkableSurfaces, treeMan
   }
 
   // Create Buildings in the blocks
+  let elevator = null;
   for (let bx = -CITY_SIZE / 2 + BLOCK_SIZE / 2; bx < CITY_SIZE / 2; bx += BLOCK_SIZE) {
     for (let bz = -CITY_SIZE / 2 + BLOCK_SIZE / 2; bz < CITY_SIZE / 2; bz += BLOCK_SIZE) {
       if (Math.abs(bx) < 10 && Math.abs(bz) < 10) {
-        // Center of the city -> Huge round skyscraper
-        createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager);
+        // Center of the city -> Huge round skyscraper with elevator
+        elevator = createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager);
         continue;
       }
       
@@ -107,5 +108,5 @@ export function createCity(scene, heightAt, colliders, walkableSurfaces, treeMan
   }
 
   scene.add(group);
-  return group;
+  return { group, elevator };
 }
