@@ -9,6 +9,7 @@ import {
   createPottedPlant,
   createCeilingLight
 } from './furniture.js';
+import { Elevator } from './elevator.js';
 
 const boxGeom = new THREE.BoxGeometry(1, 1, 1);
 const cylGeom = new THREE.CylinderGeometry(1, 1, 1, 16);
@@ -291,7 +292,7 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
 
 // -----------------------------------------------------------------------------
 // CENTER SKYSCRAPER: THE MASTERPIECE OF THE GRID
-// Walk-through atrium, twin helical stairs, interactive lounges & suites
+// Polished reception lobby, interactive elevator, themed luxury floors
 // -----------------------------------------------------------------------------
 export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager = null) {
   const groundY = heightAt(bx, bz);
@@ -305,9 +306,9 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x22242a, roughness: 0.6 });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x4f86f7, roughness: 0.05, metalness: 0.9, transparent: true, opacity: 0.35 });
   const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.15 });
-  const stairTreadMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.5 });
-  const stairRailMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.95, roughness: 0.05 });
   const neonBlueMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff });
+  const marbleMat = new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.25, metalness: 0.05 });
+  const interiorWallMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.95 });
 
   // Central Core Structural Pillar with vertical neon accent channels
   const coreRadius = 2.0;
@@ -336,8 +337,10 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     });
   }
 
-  const stepRadiusInner = coreRadius + 0.2;
-  const stepRadiusOuter = 7.2;
+  // =========================================================================
+  // CREATE ELEVATOR (replaces spiral stairs)
+  // =========================================================================
+  const elevator = new Elevator(bx, bz, groundY, floorHeight, floors, group, colliders, walkableSurfaces, interactionManager);
 
   // Build each floor
   for (let f = 0; f < floors; f++) {
@@ -345,7 +348,7 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     const wy = y + floorHeight / 2;
     
     // Donut floor slab
-    const floorMesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.4, segments), floorMat);
+    const floorMesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.4, segments), f === 0 ? marbleMat : floorMat);
     floorMesh.position.set(bx, y, bz);
     group.add(floorMesh);
 
@@ -354,36 +357,21 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     rimMesh.position.set(bx, y + 0.2, bz);
     group.add(rimMesh);
     
+    // Solid flat walkable surfaces on all floors (no holes — elevator is enclosed)
     if (walkableSurfaces) {
-      if (f === 0) {
-        // Ground floor is a solid open walking surface across the entire building
-        walkableSurfaces.push({
-          type: 'flat',
-          y: y + 0.2,
-          minX: bx - radius, maxX: bx + radius,
-          minZ: bz - radius, maxZ: bz + radius
-        });
-      } else {
-        // Upper floors have an inner circular opening for the grand open atrium & stairs
-        walkableSurfaces.push({
-          type: 'flat',
-          y: y + 0.2,
-          minX: bx - radius, maxX: bx + radius,
-          minZ: bz - radius, maxZ: bz + radius,
-          holeCenterX: bx,
-          holeCenterZ: bz,
-          holeRadius: stepRadiusOuter + 0.4
-        });
-      }
+      walkableSurfaces.push({
+        type: 'flat',
+        y: y + 0.2,
+        minX: bx - radius, maxX: bx + radius,
+        minZ: bz - radius, maxZ: bz + radius
+      });
     }
 
     // -------------------------------------------------------------------------
     // FACADE WITH 4 OPEN WALK-THROUGH ENTRANCES ON GROUND FLOOR
-    // (North, South, East, West entrances are completely open to walk through!)
     // -------------------------------------------------------------------------
     const wallW = (2 * Math.PI * radius) / segments + 0.4;
     for (let i = 0; i < segments; i++) {
-      // Ground floor: 4 grand archway entrances (segments at 0, 6, 12, 18 +/- 1)
       const isGroundDoor = (f === 0 && (
         i === 0 || i === 1 || i === segments - 1 || // South Entrance (+Z)
         i === 6 || i === 7 || i === 5 ||           // East Entrance (+X)
@@ -417,90 +405,82 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     }
     
     // -------------------------------------------------------------------------
-    // GRAND TWIN HELICAL SPIRAL STAIRCASE
-    // -------------------------------------------------------------------------
-    if (f < floors - 1) {
-      const stepsPerFloor = 24;
-      const stepLength = stepRadiusOuter - stepRadiusInner;
-      const stepH = floorHeight / stepsPerFloor;
-      
-      for (let s = 0; s < stepsPerFloor; s++) {
-        const stepProgress = s / stepsPerFloor;
-        const theta = (f * 2 * Math.PI) + (stepProgress * 2 * Math.PI);
-        const stepY = y + s * stepH + stepH / 2;
-        
-        const midR = (stepRadiusInner + stepRadiusOuter) / 2;
-        const sx = bx + Math.sin(theta) * midR;
-        const sz = bz + Math.cos(theta) * midR;
-        
-        const stepW = stepLength;
-        const stepD = (2 * Math.PI * midR) / stepsPerFloor * 1.35;
-        
-        // Wooden step tread
-        const stepMesh = new THREE.Mesh(boxGeom, stairTreadMat);
-        stepMesh.position.set(sx, stepY, sz);
-        stepMesh.rotation.y = theta + Math.PI / 2;
-        stepMesh.scale.set(stepD, stepH, stepW);
-        group.add(stepMesh);
-        
-        // Helical glass baluster & gold handrail
-        if (s % 2 === 0) {
-          const railX = bx + Math.sin(theta) * (stepRadiusOuter - 0.1);
-          const railZ = bz + Math.cos(theta) * (stepRadiusOuter - 0.1);
-          const postMesh = new THREE.Mesh(cylGeom, stairRailMat);
-          postMesh.position.set(railX, stepY + 0.7, railZ);
-          postMesh.scale.set(0.04, 1.2, 0.04);
-          group.add(postMesh);
-          
-          const railCap = new THREE.Mesh(boxGeom, goldTrimMat);
-          railCap.position.set(railX, stepY + 1.3, railZ);
-          railCap.rotation.y = theta + Math.PI / 2;
-          railCap.scale.set(stepD * 2.2, 0.08, 0.1);
-          group.add(railCap);
-        }
-      }
-
-      // Continuous spiral walkable surface per floor
-      if (walkableSurfaces) {
-        walkableSurfaces.push({
-          type: 'spiral',
-          cx: bx, cz: bz,
-          rMin: stepRadiusInner - 0.2,
-          rMax: stepRadiusOuter + 0.5,
-          minX: bx - stepRadiusOuter - 0.5,
-          maxX: bx + stepRadiusOuter + 0.5,
-          minZ: bz - stepRadiusOuter - 0.5,
-          maxZ: bz + stepRadiusOuter + 0.5,
-          startY: y + 0.2,
-          floorH: floorHeight
-        });
-      }
-    }
-    
-    // -------------------------------------------------------------------------
-    // ULTRA-DETAILED THEMED INTERIOR FLOORS WITH FULL INTERACTION
+    // THEMED INTERIOR FLOORS WITH FULL INTERACTION
     // -------------------------------------------------------------------------
     const floorY = y + 0.2;
     if (f === 0) {
       // -----------------------------------------------------------------------
-      // GROUND FLOOR: GRAND WALK-THROUGH ATRIUM & EXECUTIVE LOBBY
+      // GROUND FLOOR: POLISHED RECEPTION LOBBY
       // -----------------------------------------------------------------------
+      
       // Center Holographic Globe Feature near Core
       const holoRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.06, 8, 32), neonBlueMat);
       holoRing.position.set(bx, floorY + 1.8, bz);
       holoRing.rotation.x = Math.PI / 2;
       group.add(holoRing);
 
-      // Curved Executive Reception Counter
+      // Second ring at an angle
+      const holoRing2 = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.04, 8, 32), neonBlueMat);
+      holoRing2.position.set(bx, floorY + 2.2, bz);
+      holoRing2.rotation.x = Math.PI / 3;
+      holoRing2.rotation.z = Math.PI / 4;
+      group.add(holoRing2);
+
+      // Curved Executive Reception Counter — wider, more detailed
       const desk = new THREE.Mesh(boxGeom, buildingMat);
       desk.position.set(bx, floorY + 0.7, bz + 12);
-      desk.scale.set(6.0, 1.4, 1.4);
+      desk.scale.set(8.0, 1.4, 1.6);
       group.add(desk);
       
+      // Desk top surface (lighter)
+      const deskTop = new THREE.Mesh(boxGeom, marbleMat);
+      deskTop.position.set(bx, floorY + 1.42, bz + 12);
+      deskTop.scale.set(8.2, 0.06, 1.7);
+      group.add(deskTop);
+
+      // Reception desk monitors (2)
+      const monitorMat = new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.1, metalness: 0.9 });
+      for (let m = -1; m <= 1; m += 2) {
+        const monitor = new THREE.Mesh(boxGeom, monitorMat);
+        monitor.position.set(bx + m * 2.2, floorY + 1.9, bz + 11.6);
+        monitor.scale.set(1.4, 0.9, 0.06);
+        group.add(monitor);
+        // Screen glow
+        const screen = new THREE.Mesh(boxGeom, new THREE.MeshBasicMaterial({ color: 0x1a3355 }));
+        screen.position.set(bx + m * 2.2, floorY + 1.9, bz + 11.55);
+        screen.scale.set(1.25, 0.75, 0.02);
+        group.add(screen);
+      }
+
+      // Desk lamp
+      const lampBase = new THREE.Mesh(cylGeom, goldTrimMat);
+      lampBase.position.set(bx + 0, floorY + 1.45, bz + 11.4);
+      lampBase.scale.set(0.15, 0.08, 0.15);
+      group.add(lampBase);
+      const lampPole = new THREE.Mesh(cylGeom, goldTrimMat);
+      lampPole.position.set(bx + 0, floorY + 1.9, bz + 11.4);
+      lampPole.scale.set(0.04, 0.8, 0.04);
+      group.add(lampPole);
+      const lampShade = new THREE.Mesh(cylGeom, new THREE.MeshBasicMaterial({ color: 0xffeebb }));
+      lampShade.position.set(bx + 0, floorY + 2.35, bz + 11.4);
+      lampShade.scale.set(0.2, 0.15, 0.2);
+      group.add(lampShade);
+      
+      // Logo Sign behind reception
       const logoSign = new THREE.Mesh(boxGeom, goldTrimMat);
-      logoSign.position.set(bx, floorY + 2.6, bz + 12.6);
-      logoSign.scale.set(4.0, 1.2, 0.1);
+      logoSign.position.set(bx, floorY + 3.0, bz + 12.8);
+      logoSign.scale.set(5.0, 1.5, 0.1);
       group.add(logoSign);
+
+      // "ELEVATOR" direction sign
+      const elevSign = new THREE.Mesh(boxGeom, new THREE.MeshStandardMaterial({ color: 0x1a1c22, roughness: 0.3 }));
+      elevSign.position.set(elevator.shaftX, floorY + 3.5, elevator.shaftZ + elevator.shaftRadius + 0.5);
+      elevSign.scale.set(2.5, 0.6, 0.08);
+      group.add(elevSign);
+      const elevText = new THREE.Mesh(boxGeom, neonBlueMat);
+      elevText.position.set(elevator.shaftX, floorY + 3.5, elevator.shaftZ + elevator.shaftRadius + 0.56);
+      elevText.scale.set(2.0, 0.35, 0.02);
+      group.add(elevText);
 
       // East & West Waiting Lounges with Interactive TVs & Cupboards
       createSofa(bx - 12, floorY, bz, Math.PI / 2, group, colliders, null, new THREE.Color(0x223355));
@@ -516,6 +496,31 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       createPottedPlant(bx + 8, floorY, bz + 9, group);
       createPottedPlant(bx - 8, floorY, bz - 9, group);
       createPottedPlant(bx + 8, floorY, bz - 9, group);
+      // More palms near entrances
+      createPottedPlant(bx - 14, floorY, bz + 14, group);
+      createPottedPlant(bx + 14, floorY, bz + 14, group);
+
+      // Floor inlay pattern (marble cross pattern)
+      const inlayMat = new THREE.MeshStandardMaterial({ color: 0xc8b890, roughness: 0.2, metalness: 0.1 });
+      for (let ix = -2; ix <= 2; ix++) {
+        const inlay = new THREE.Mesh(boxGeom, inlayMat);
+        inlay.position.set(bx + ix * 4, floorY + 0.01, bz);
+        inlay.scale.set(0.3, 0.02, 16);
+        group.add(inlay);
+      }
+      for (let iz = -2; iz <= 2; iz++) {
+        const inlay = new THREE.Mesh(boxGeom, inlayMat);
+        inlay.position.set(bx, floorY + 0.01, bz + iz * 4);
+        inlay.scale.set(16, 0.02, 0.3);
+        group.add(inlay);
+      }
+
+      // Ceiling lights on ground floor
+      createCeilingLight(bx - 7, y + floorHeight - 0.1, bz + 7, group);
+      createCeilingLight(bx + 7, y + floorHeight - 0.1, bz + 7, group);
+      createCeilingLight(bx - 7, y + floorHeight - 0.1, bz - 7, group);
+      createCeilingLight(bx + 7, y + floorHeight - 0.1, bz - 7, group);
+      createCeilingLight(bx, y + floorHeight - 0.1, bz, group);
 
     } else if (f === floors - 1) {
       // -----------------------------------------------------------------------
@@ -608,4 +613,7 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       }
     }
   }
+
+  return elevator;
 }
+
