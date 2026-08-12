@@ -373,14 +373,21 @@ const network = new NetworkClient({
     if (!rp) return;
     rp.setName(msg.name);
   },
-  onOpen: () => {
-    statusEl.classList.add('connected');
-  },
-  onClose: () => {
-    statusEl.classList.remove('connected');
-    statusText.textContent = 'disconnected · reconnecting...';
+  onStatusChange: (status) => {
+    if (status === 'open') {
+      statusEl.classList.add('connected');
+    } else {
+      statusEl.classList.remove('connected');
+      statusText.textContent = 'disconnected · reconnecting...';
+    }
   },
 });
+
+try {
+  network.connect();
+} catch (e) {
+  console.warn('WebSocket connect failed:', e);
+}
 
 function swapAvatarColor(player, newColor) {
   const av = createAvatar({ color: newColor, name: player.name });
