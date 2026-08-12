@@ -230,6 +230,68 @@
       font-size: 0.78rem;
       color: rgba(255,255,255,0.4);
     }
+    /* GTA V Style HUD */
+    #hud-money {
+      position: fixed; top: 20px; right: 240px;
+      font-family: ui-monospace, 'Impact', monospace, sans-serif;
+      font-size: 1.8rem; font-weight: 900;
+      color: #2dc653;
+      text-shadow: 2px 2px 0px #000, 0 0 10px rgba(45, 198, 83, 0.4);
+      letter-spacing: 0.05em;
+      z-index: 5;
+      text-align: right;
+    }
+    #money-delta {
+      font-size: 1.1rem;
+      font-weight: 700;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    #money-delta.pos { color: #2dc653; }
+    #money-delta.neg { color: #e63946; }
+    #money-delta.hidden { opacity: 0; transform: translateY(-8px); }
+
+    #hud-bars {
+      position: fixed; top: 228px; right: 20px;
+      width: 200px; display: flex; gap: 4px; z-index: 5;
+    }
+    .hud-bar-health, .hud-bar-armor {
+      flex: 1; height: 7px;
+      background: rgba(10, 15, 25, 0.85);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 3px; overflow: hidden;
+    }
+    #health-fill { width: 100%; height: 100%; background: #2dc653; }
+    #armor-fill { width: 85%; height: 100%; background: #4f86f7; }
+
+    #radio-hud {
+      position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 15, 25, 0.9);
+      border: 1px solid #4f86f7;
+      border-radius: 30px;
+      padding: 0.6rem 1.6rem;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.8), 0 0 15px rgba(79, 134, 247, 0.3);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 25;
+    }
+    #radio-hud.visible { opacity: 1; }
+    .radio-icon { font-size: 1.4rem; }
+    #radio-station-name { font-size: 1rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; }
+    #radio-station-genre { font-size: 0.75rem; color: #4f86f7; }
+
+    #dialogue-box {
+      position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 15, 25, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-left: 4px solid #4f86f7;
+      border-radius: 12px;
+      padding: 1rem 1.8rem;
+      max-width: 500px; width: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 20;
+    }
+    #dialogue-box.visible { opacity: 1; }
+    #dialogue-speaker { font-size: 0.85rem; font-weight: 700; color: #4f86f7; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    #dialogue-text { font-size: 1rem; color: #eee; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -244,17 +306,40 @@
       </form>
       <p class="controls-hint">
         <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move · <span class="key">Shift</span> run<br />
+        <span class="key">E</span> interact · <span class="key">R</span> radio · <span class="key">H</span> horn<br />
         <span class="key">C</span> camera · <span class="key">M</span> map · <span class="key">Esc</span> release mouse
       </p>
     </div>
   </div>
   
+  <div id="hud-money">
+    <div id="money-val">$2,500</div>
+    <div id="money-delta" class="hidden">+$200</div>
+  </div>
+
   <div id="minimap-container">
     <canvas id="minimap" width="200" height="200"></canvas>
+  </div>
+  <div id="hud-bars">
+    <div class="hud-bar-health"><div id="health-fill"></div></div>
+    <div class="hud-bar-armor"><div id="armor-fill"></div></div>
   </div>
   
   <div id="bigmap-container">
     <canvas id="bigmap" width="600" height="600"></canvas>
+  </div>
+
+  <div id="radio-hud">
+    <div class="radio-icon">📻</div>
+    <div class="radio-info">
+      <div id="radio-station-name">Synthwave 84.5 FM</div>
+      <div id="radio-station-genre">Retrowave / Synth</div>
+    </div>
+  </div>
+
+  <div id="dialogue-box">
+    <div id="dialogue-speaker">Citizen</div>
+    <div id="dialogue-text">Nice ride, partner!</div>
   </div>
   
   <div id="interact-prompt">
