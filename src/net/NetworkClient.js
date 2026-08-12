@@ -12,7 +12,7 @@ import { MSG } from '../../shared/protocol.js';
 
 export class NetworkClient {
   constructor({
-    url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
+    url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname || 'localhost'}:8080`,
     onInit,
     onJoin,
     onState,
