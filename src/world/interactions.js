@@ -15,10 +15,11 @@ export class InteractionManager {
     this.holdTimer = 0;
     this.requiredHold = 0.45; // 0.45s hold for snappy, satisfying interaction
     this.restingBed = null; // Currently resting bed
+    this.seatedObject = null; // Currently seated sofa/chair
   }
 
   register(item) {
-    // item: { type: 'tv'|'drawer'|'bed'|'car'|'lamp', position: Vector3, radius: number, onInteract: function, getPrompt: function, update: function }
+    // item: { type: 'tv'|'drawer'|'bed'|'sofa'|'chair'|'car'|'lamp'|'terminal'|'elevator_call'|'elevator_panel', position: Vector3, radius: number, onInteract: function, getPrompt: function, update: function }
     this.interactables.push(item);
     return item;
   }
@@ -59,15 +60,25 @@ export class InteractionManager {
       }
     }
 
-    // 2. If player is currently resting in bed, handle get-up input
+    // 2. If player is currently resting in bed or seated on sofa/chair, handle get-up input
     if (this.restingBed) {
       interactPrompt.classList.add('visible');
       if (promptTextEl) promptTextEl.textContent = 'PRESS SPACE OR E TO GET UP';
       if (interactProgress) interactProgress.style.strokeDashoffset = 88;
 
       if (input.jump || (input.interact && !player.lastInteract)) {
-        // Stand up from bed
         this.standUpFromBed(player);
+      }
+      return;
+    }
+
+    if (this.seatedObject) {
+      interactPrompt.classList.add('visible');
+      if (promptTextEl) promptTextEl.textContent = 'PRESS SPACE OR E TO STAND UP';
+      if (interactProgress) interactProgress.style.strokeDashoffset = 88;
+
+      if (input.jump || (input.interact && !player.lastInteract)) {
+        this.standUpFromSeat(player);
       }
       return;
     }
@@ -82,9 +93,15 @@ export class InteractionManager {
     this.currentNearby = nearby;
 
     if (nearby) {
+      const promptStr = nearby.getPrompt ? nearby.getPrompt() : 'HOLD E TO INTERACT';
+      if (!promptStr) {
+        interactPrompt.classList.remove('visible');
+        return;
+      }
+
       interactPrompt.classList.add('visible');
       if (promptTextEl) {
-        promptTextEl.textContent = nearby.getPrompt ? nearby.getPrompt() : 'HOLD E TO INTERACT';
+        promptTextEl.textContent = promptStr;
       }
 
       if (input.interact) {
@@ -142,4 +159,36 @@ export class InteractionManager {
     
     this.restingBed = null;
   }
+
+  sitOnSeat(player, seatItem) {
+    this.seatedObject = seatItem;
+    player.isResting = true; // Prevents movement while seated
+
+    player.position.set(seatItem.position.x, seatItem.position.y + 0.2, seatItem.position.z);
+    player.facing = seatItem.facing !== undefined ? seatItem.facing : 0;
+    player.velocityY = 0;
+
+    if (player.avatar && player.avatar.root) {
+      player.avatar.root.position.y = -0.3; // Lowers into seat
+      player.avatar.root.rotation.y = player.facing;
+    }
+  }
+
+  standUpFromSeat(player) {
+    if (!this.seatedObject) return;
+
+    // Step forward from seat
+    const forwardX = Math.sin(player.facing || 0) * 1.0;
+    const forwardZ = Math.cos(player.facing || 0) * 1.0;
+    player.position.x += forwardX;
+    player.position.z += forwardZ;
+    player.isResting = false;
+
+    if (player.avatar && player.avatar.root) {
+      player.avatar.root.position.y = 0;
+    }
+
+    this.seatedObject = null;
+  }
 }
+
