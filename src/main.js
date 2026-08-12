@@ -252,15 +252,33 @@ const initialName = (nameInput?.value.trim()) || 'Player';
 
 function enterWorld() {
   hasJoined = true;
-  overlay.classList.add('hidden');
-  soundManager.init();
-  soundManager.resume();
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+
+  try {
+    soundManager.init();
+    soundManager.resume();
+  } catch (e) {
+    console.warn('Audio init error:', e);
+  }
 
   const chosenName = nameInput?.value.trim() || 'Player';
-  localStorage.setItem('grid_player_name', chosenName);
-  localPlayer.setName(chosenName);
-  network.sendName(chosenName);
-  pointerLock.requestLock();
+  try {
+    localStorage.setItem('grid_player_name', chosenName);
+  } catch (e) {}
+
+  if (localPlayer) {
+    localPlayer.setName(chosenName);
+  }
+
+  try {
+    network.sendName(chosenName);
+  } catch (e) {}
+
+  if (pointerLock) {
+    pointerLock.requestLock();
+  }
 }
 
 joinForm?.addEventListener('submit', (e) => {
@@ -270,6 +288,7 @@ joinForm?.addEventListener('submit', (e) => {
 
 playBtn?.addEventListener('click', (e) => {
   e.preventDefault();
+  e.stopPropagation();
   enterWorld();
 });
 
