@@ -248,13 +248,14 @@ export function createCity(scene, heightAt, colliders, walkableSurfaces, treeMan
   // ---------------------------------------------------------------------------
   // 4. VENUE AND BUILDING GENERATION ACROSS CITY BLOCKS
   // ---------------------------------------------------------------------------
-  let elevator = null;
+  const elevators = [];
 
   for (let bx = -CITY_SIZE / 2 + BLOCK_SIZE / 2; bx < CITY_SIZE / 2; bx += BLOCK_SIZE) {
     for (let bz = -CITY_SIZE / 2 + BLOCK_SIZE / 2; bz < CITY_SIZE / 2; bz += BLOCK_SIZE) {
       // 1. Center of City -> Grand Maze Bank Centerpiece Skyscraper
       if (Math.abs(bx) < 10 && Math.abs(bz) < 10) {
-        elevator = createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager);
+        const skyscraperElevator = createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager);
+        if (skyscraperElevator) elevators.push(skyscraperElevator);
         continue;
       }
 
@@ -276,15 +277,16 @@ export function createCity(scene, heightAt, colliders, walkableSurfaces, treeMan
         continue;
       }
 
-      // 5. Remaining Blocks -> Distinct Architectural Archetypes (Vinewood Plaza, Terraced Condos, Brick Deco Tower, Glass Corporate High-Rise)
+      // 5. Remaining Blocks -> Realistic Apartment Buildings with Central Stairs & Elevators
       const bWidth = BLOCK_SIZE - ROAD_WIDTH - BUILDING_MARGIN * 2;
       const bDepth = BLOCK_SIZE - ROAD_WIDTH - BUILDING_MARGIN * 2;
       const floors = 3 + Math.floor(rand() * 4); // 3 to 6 floors
 
-      createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, colliders, walkableSurfaces, rand, interactionManager);
+      const bldgElevator = createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, colliders, walkableSurfaces, rand, interactionManager);
+      if (bldgElevator) elevators.push(bldgElevator);
     }
   }
 
   scene.add(group);
-  return { group, elevator };
+  return { group, elevators };
 }
