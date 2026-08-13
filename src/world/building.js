@@ -29,12 +29,11 @@ const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0
 const neonCyanMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff });
 const neonOrangeMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
 const neonGreenMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
-const waterTowerWoodMat = new THREE.MeshStandardMaterial({ color: 0x5a4230, roughness: 0.9 });
 const concreteFloorMat = new THREE.MeshStandardMaterial({ color: 0x2c2e35, roughness: 0.7 });
 
 // Apartment Interior Materials
-const wallInteriorMat = new THREE.MeshStandardMaterial({ color: 0xe8e6e1, roughness: 0.9 });
-const wallCorridorMat = new THREE.MeshStandardMaterial({ color: 0x383c46, roughness: 0.7, metalness: 0.2 });
+const wallInteriorMat = new THREE.MeshStandardMaterial({ color: 0xedebe6, roughness: 0.9 });
+const wallCorridorMat = new THREE.MeshStandardMaterial({ color: 0x323640, roughness: 0.7, metalness: 0.2 });
 const doorframeMat = new THREE.MeshStandardMaterial({ color: 0x241711, roughness: 0.6 });
 const carpetCorridorMat = new THREE.MeshStandardMaterial({ color: 0x5a1820, roughness: 0.95 });
 const woodFloorMat = new THREE.MeshStandardMaterial({ color: 0x755338, roughness: 0.7 });
@@ -54,14 +53,14 @@ function makeBox(group, mat, x, y, z, w, h, d, rx = 0, ry = 0, rz = 0) {
 // WALKABLE MULTI-FLIGHT STAIRCASE SYSTEM
 // -----------------------------------------------------------------------------
 function buildWalkableStairs(group, sx, sy, sz, floorH, f, totalFloors, colliders, walkableSurfaces) {
-  if (f >= totalFloors - 1) return; // Top floor connects to rooftop
+  if (f >= totalFloors - 1) return;
 
-  const stairW = 1.3;
-  const stairDepth = 3.8;
+  const stairW = 1.0;
+  const stairDepth = 3.6;
   const midH = floorH / 2;
   const numSteps = 8;
 
-  // 1. Flight 1 (Climbing from Floor Level Y to Mid-Landing at Y + midH)
+  // 1. Flight 1: Climbing up to mid-landing
   const f1ZStart = sz - stairDepth / 2;
   const f1ZEnd = sz;
   for (let i = 0; i < numSteps; i++) {
@@ -69,10 +68,9 @@ function buildWalkableStairs(group, sx, sy, sz, floorH, f, totalFloors, collider
     const stepX = sx - stairW / 2;
     const stepY = sy + fraction * midH;
     const stepZ = f1ZStart + fraction * (f1ZEnd - f1ZStart);
-    makeBox(group, stairMat, stepX, stepY - 0.08, stepZ, stairW - 0.05, 0.16, (stairDepth / 2) / numSteps + 0.05);
+    makeBox(group, stairMat, stepX, stepY - 0.08, stepZ, stairW - 0.05, 0.16, (stairDepth / 2) / numSteps + 0.04);
   }
 
-  // Walkable ramp for Flight 1
   if (walkableSurfaces) {
     walkableSurfaces.push({
       type: 'ramp',
@@ -86,32 +84,31 @@ function buildWalkableStairs(group, sx, sy, sz, floorH, f, totalFloors, collider
 
   // 2. Mid-Landing Platform
   const landingY = sy + midH;
-  const landingZ = sz + 0.3;
-  makeBox(group, stairMat, sx, landingY, landingZ, stairW * 2 + 0.2, 0.2, 1.4);
+  const landingZ = sz + 0.2;
+  makeBox(group, stairMat, sx, landingY, landingZ, stairW * 2 + 0.1, 0.2, 1.2);
   if (walkableSurfaces) {
     walkableSurfaces.push({
       type: 'flat',
       y: landingY + 0.1,
-      minX: sx - stairW - 0.1, maxX: sx + stairW + 0.1,
-      minZ: landingZ - 0.7, maxZ: landingZ + 0.7
+      minX: sx - stairW, maxX: sx + stairW,
+      minZ: landingZ - 0.6, maxZ: landingZ + 0.6
     });
   }
 
-  // Handrail along outer edge of landing
-  makeBox(group, blackSteelMat, sx, landingY + 0.6, landingZ + 0.65, stairW * 2 + 0.2, 1.0, 0.05);
+  // Safety railing on landing
+  makeBox(group, blackSteelMat, sx, landingY + 0.6, landingZ + 0.55, stairW * 2 + 0.1, 1.0, 0.05);
 
-  // 3. Flight 2 (Climbing from Mid-Landing to Upper Floor Level Y + floorH)
-  const f2ZStart = landingZ - 0.6;
+  // 3. Flight 2: Climbing up to next floor
+  const f2ZStart = landingZ - 0.5;
   const f2ZEnd = sz - stairDepth / 2;
   for (let i = 0; i < numSteps; i++) {
     const fraction = (i + 0.5) / numSteps;
     const stepX = sx + stairW / 2;
     const stepY = landingY + fraction * midH;
     const stepZ = f2ZStart - fraction * (f2ZStart - f2ZEnd);
-    makeBox(group, stairMat, stepX, stepY - 0.08, stepZ, stairW - 0.05, 0.16, (stairDepth / 2) / numSteps + 0.05);
+    makeBox(group, stairMat, stepX, stepY - 0.08, stepZ, stairW - 0.05, 0.16, (stairDepth / 2) / numSteps + 0.04);
   }
 
-  // Walkable ramp for Flight 2
   if (walkableSurfaces) {
     walkableSurfaces.push({
       type: 'ramp',
@@ -123,8 +120,8 @@ function buildWalkableStairs(group, sx, sy, sz, floorH, f, totalFloors, collider
     });
   }
 
-  // Center divider railing between Flight 1 and Flight 2
-  makeBox(group, blackSteelMat, sx, sy + floorH / 2, sz, 0.06, floorH - 0.4, stairDepth);
+  // Center divider railing between flights
+  makeBox(group, blackSteelMat, sx, sy + floorH / 2, sz - 0.2, 0.06, floorH - 0.4, stairDepth - 0.4);
 }
 
 // -----------------------------------------------------------------------------
@@ -132,22 +129,22 @@ function buildWalkableStairs(group, sx, sy, sz, floorH, f, totalFloors, collider
 // -----------------------------------------------------------------------------
 function buildApartmentFlat(group, flatNum, fx, fy, fz, fw, fd, isFront, isLeft, colliders, rand, interactionManager) {
   const wallH = 4.2;
-  const wt = 0.3; // Wall thickness
+  const wt = 0.25;
 
-  // Hardwood floor for the flat
-  makeBox(group, woodFloorMat, fx, fy + 0.12, fz, fw - 0.2, 0.04, fd - 0.2);
+  // Hardwood floor for flat interior
+  makeBox(group, woodFloorMat, fx, fy + 0.12, fz, fw - 0.1, 0.04, fd - 0.1);
 
-  // Demising Wall separating Front and Back flat (along Z boundary)
+  // Demising Wall separating Front and Back flats along Z boundary
   const demisingZ = isFront ? fz - fd / 2 : fz + fd / 2;
   makeBox(group, wallInteriorMat, fx, fy + wallH / 2, demisingZ, fw, wallH, wt);
 
-  // Corridor Entryway Doorframe & Plaque on the corridor-facing wall
+  // Corridor Entrance Doorframe & Plaque
   const corridorX = isLeft ? fx + fw / 2 : fx - fw / 2;
-  const doorZ = isFront ? fz - fd / 4 : fz + fd / 4;
-  const doorW = 1.4;
-  const doorH = 2.8;
+  const doorZ = isFront ? fz - fd / 3.2 : fz + fd / 3.2;
+  const doorW = 1.8; // Generous 1.8m wide doorway
+  const doorH = 2.9;
 
-  // Wall segments to the left and right of flat entrance door
+  // Corridor Wall segments leaving door opening
   const wallZ1Len = Math.abs((doorZ - doorW / 2) - (fz - fd / 2));
   const wallZ1Mid = (fz - fd / 2) + wallZ1Len / 2;
   makeBox(group, wallCorridorMat, corridorX, fy + wallH / 2, wallZ1Mid, wt, wallH, wallZ1Len);
@@ -159,15 +156,15 @@ function buildApartmentFlat(group, flatNum, fx, fy, fz, fw, fd, isFront, isLeft,
   // Door lintel header above entrance
   makeBox(group, wallCorridorMat, corridorX, fy + doorH + (wallH - doorH) / 2, doorZ, wt, wallH - doorH, doorW);
 
-  // Mahogany Door Frame Trim
-  makeBox(group, doorframeMat, corridorX, fy + doorH / 2, doorZ - doorW / 2, wt + 0.08, doorH, 0.12);
-  makeBox(group, doorframeMat, corridorX, fy + doorH / 2, doorZ + doorW / 2, wt + 0.08, doorH, 0.12);
-  makeBox(group, doorframeMat, corridorX, fy + doorH + 0.06, doorZ, wt + 0.08, 0.12, doorW + 0.2);
+  // Door Frame Trim
+  makeBox(group, doorframeMat, corridorX, fy + doorH / 2, doorZ - doorW / 2, wt + 0.06, doorH, 0.1);
+  makeBox(group, doorframeMat, corridorX, fy + doorH / 2, doorZ + doorW / 2, wt + 0.06, doorH, 0.1);
+  makeBox(group, doorframeMat, corridorX, fy + doorH + 0.05, doorZ, wt + 0.06, 0.1, doorW + 0.16);
 
-  // Golden Apartment Plaque (e.g. FLAT 101, FLAT 102...)
-  const plaque = makeBox(group, brassPlaqueMat, corridorX + (isLeft ? 0.2 : -0.2), fy + doorH + 0.35, doorZ, 0.04, 0.25, 0.6);
+  // Brass Plaque (FLAT 101, 102...)
+  makeBox(group, brassPlaqueMat, corridorX + (isLeft ? 0.18 : -0.18), fy + doorH + 0.35, doorZ, 0.04, 0.25, 0.6);
 
-  // Colliders for corridor walls (leaving doorway open)
+  // Colliders for corridor walls & demising walls
   if (colliders) {
     colliders.push({
       type: 'box',
@@ -181,7 +178,6 @@ function buildApartmentFlat(group, flatNum, fx, fy, fz, fw, fd, isFront, isLeft,
       minZ: doorZ + doorW / 2, maxZ: (fz + fd / 2),
       minY: fy, maxY: fy + wallH
     });
-    // Demising wall collider
     colliders.push({
       type: 'box',
       minX: fx - fw / 2, maxX: fx + fw / 2,
@@ -191,37 +187,36 @@ function buildApartmentFlat(group, flatNum, fx, fy, fz, fw, fd, isFront, isLeft,
   }
 
   // ---------------------------------------------------------------------------
-  // INTERIOR ROOM PARTITIONS (Living Room, Bedroom, Kitchenette, Bathroom)
+  // INTERIOR ROOM PARTITIONS
   // ---------------------------------------------------------------------------
-  const bedPartitionX = isLeft ? fx - fw / 6 : fx + fw / 6;
+  const bedPartitionX = isLeft ? fx - fw / 5 : fx + fw / 5;
   const bedDoorZ = isFront ? fz + fd / 4 : fz - fd / 4;
-  const bDoorW = 1.3;
+  const bDoorW = 1.8;
 
-  // Partition wall separating Living Lounge and Master Bedroom
+  // Master bedroom partition wall
   makeBox(group, wallInteriorMat, bedPartitionX, fy + wallH / 2, (fz + fd / 2 + bedDoorZ + bDoorW / 2) / 2, wt, wallH, Math.abs(fd / 2 - (bedDoorZ + bDoorW / 2)));
   makeBox(group, wallInteriorMat, bedPartitionX, fy + wallH / 2, (fz - fd / 2 + bedDoorZ - bDoorW / 2) / 2, wt, wallH, Math.abs((bedDoorZ - bDoorW / 2) - (-fd / 2)));
   makeBox(group, wallInteriorMat, bedPartitionX, fy + doorH + (wallH - doorH) / 2, bedDoorZ, wt, wallH - doorH, bDoorW);
 
-  // 1. MASTER BEDROOM SUITE
-  const bedX = isLeft ? fx - fw / 3 : fx + fw / 3;
+  // 1. MASTER BEDROOM
+  const bedX = isLeft ? fx - fw / 2.6 : fx + fw / 2.6;
   const bedZ = isFront ? fz + fd / 4 : fz - fd / 4;
   createBedroomSuite(bedX, fy + 0.2, bedZ, isLeft ? Math.PI / 2 : -Math.PI / 2, group, colliders, rand, interactionManager);
-  createCupboardWithDrawers(bedX + (isLeft ? 2.5 : -2.5), fy + 0.2, bedZ, isLeft ? -Math.PI / 2 : Math.PI / 2, group, colliders, rand, interactionManager);
+  createCupboardWithDrawers(bedX + (isLeft ? 2.6 : -2.6), fy + 0.2, bedZ, isLeft ? -Math.PI / 2 : Math.PI / 2, group, colliders, rand, interactionManager);
   createCeilingLight(bedX, fy + wallH - 0.1, bedZ, group);
 
-  // 2. LIVING ROOM & ENTERTAINMENT SUITE
+  // 2. LIVING ROOM & ENTERTAINMENT
   const loungeX = isLeft ? fx + fw / 8 : fx - fw / 8;
   const loungeZ = isFront ? fz + fd / 4 : fz - fd / 4;
   createSofa(loungeX, fy + 0.2, loungeZ - 0.8, isFront ? 0 : Math.PI, group, colliders, rand, null, interactionManager);
-  createTVUnit(loungeX, fy + 0.2, loungeZ + 1.8, isFront ? Math.PI : 0, group, colliders, rand, interactionManager);
-  createPottedPlant(loungeX + (isLeft ? -1.8 : 1.8), fy + 0.2, loungeZ + 1.8, group);
+  createTVUnit(loungeX, fy + 0.2, loungeZ + 2.0, isFront ? Math.PI : 0, group, colliders, rand, interactionManager);
+  createPottedPlant(loungeX + (isLeft ? -2.2 : 2.2), fy + 0.2, loungeZ + 2.0, group);
   createCeilingLight(loungeX, fy + wallH - 0.1, loungeZ, group);
 
   // 3. KITCHENETTE & DINING AREA
-  const kitX = isLeft ? fx - fw / 4 : fx + fw / 4;
-  const kitZ = isFront ? fz - fd / 3.5 : fz + fd / 3.5;
+  const kitX = isLeft ? fx - fw / 3.5 : fx + fw / 3.5;
+  const kitZ = isFront ? fz - fd / 3.2 : fz + fd / 3.2;
   createKitchenette(kitX, fy + 0.2, kitZ, isFront ? 0 : Math.PI, group, colliders, rand, interactionManager);
-  createCupboardWithDrawers(kitX + (isLeft ? 2.2 : -2.2), fy + 0.2, kitZ, 0, group, colliders, rand, interactionManager);
 }
 
 // -----------------------------------------------------------------------------
@@ -234,23 +229,22 @@ function addRooftopInfrastructure(group, bx, roofY, bz, bWidth, bDepth, styleTyp
   makeBox(group, darkCompositeMat, bx - bWidth / 2 + 0.15, roofY + parapetH / 2, bz, 0.3, parapetH, bDepth);
   makeBox(group, darkCompositeMat, bx + bWidth / 2 - 0.15, roofY + parapetH / 2, bz, 0.3, parapetH, bDepth);
 
-  // Central Stairwell & Elevator Penthouse Room
-  const phW = 7.0;
-  const phD = 8.0;
-  const phH = 3.5;
+  // Penthouse stairwell enclosure
+  const phW = 6.4;
+  const phD = 7.2;
+  const phH = 3.4;
   makeBox(group, darkCompositeMat, bx, roofY + phH / 2, bz, phW, phH, phD);
-  // Penthouse exit door onto roof
   makeBox(group, doorframeMat, bx + phW / 2 + 0.05, roofY + 1.4, bz + 1.5, 0.1, 2.6, 1.4);
   makeBox(group, new THREE.MeshStandardMaterial({ color: 0x8899aa }), bx + phW / 2 + 0.06, roofY + 1.4, bz + 1.5, 0.05, 2.4, 1.2);
 
-  // HVAC Chiller Units
-  const hvac = makeBox(group, hvacMetalMat, bx - 6, roofY + 1.2, bz - 5, 4.2, 2.4, 3.2);
+  // HVAC Chiller
+  makeBox(group, hvacMetalMat, bx - 6, roofY + 1.2, bz - 5, 4.2, 2.4, 3.2);
   const fan1 = new THREE.Mesh(cylGeom, blackSteelMat);
   fan1.position.set(bx - 7, roofY + 2.45, bz - 5);
   fan1.scale.set(1.2, 0.2, 1.2);
   group.add(fan1);
 
-  // Communications Antenna Mast with Beacon
+  // Antenna Mast
   const mast = new THREE.Mesh(cylGeom, chromeMat);
   mast.position.set(bx + 6, roofY + 4.5, bz + 5);
   mast.scale.set(0.12, 9.0, 0.12);
@@ -271,7 +265,7 @@ function addRooftopInfrastructure(group, bx, roofY, bz, bWidth, bDepth, styleTyp
 }
 
 // -----------------------------------------------------------------------------
-// COMPLETE APARTMENT BUILDING BUILDER WITH CENTRAL ELEVATOR & STAIRS
+// COMPLETE APARTMENT BUILDING WITH CENTRAL ELEVATOR & STAIRS
 // -----------------------------------------------------------------------------
 export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, colliders, walkableSurfaces, rand, interactionManager = null) {
   const groundY = heightAt(bx, bz);
@@ -279,7 +273,6 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
   const wallThickness = 0.5;
   const styleType = Math.floor(rand() * 4);
 
-  // Determine styling facade
   let facadeMat, trimMat, windowGlassMat;
   if (styleType === 0) {
     facadeMat = whiteStuccoMat;
@@ -299,9 +292,7 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
     windowGlassMat = cyanGlassMat;
   }
 
-  // ===========================================================================
-  // 1. CENTRAL ELEVATOR IN EVERY BUILDING
-  // ===========================================================================
+  // 1. Central Elevator in Building Core
   const elevator = new Elevator(
     bx, bz, groundY, floorHeight, floors, group, colliders, walkableSurfaces, interactionManager,
     -1.4, 0
@@ -312,18 +303,17 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
   const stairX = bx + 1.4;
   const stairZ = bz;
 
-  // Build each floor
   for (let f = 0; f < floors; f++) {
     const y = groundY + f * floorHeight;
     const isGround = (f === 0);
 
-    // Floor Slab with cutouts for elevator shaft and stairwell
+    // Floor Slab
     makeBox(group, concreteFloorMat, bx, y + 0.1, bz, bWidth, 0.2, bDepth);
-
-    // Architectural Trim Bands
     makeBox(group, trimMat, bx, y + floorHeight, bz, bWidth + 0.3, 0.25, bDepth + 0.3);
 
-    // Walkable floor slab with cutouts on upper floors
+    // -------------------------------------------------------------------------
+    // 5 SOLID NON-OVERLAPPING WALKABLE FLOOR SLABS (ZERO FALL-THROUGH BUG)
+    // -------------------------------------------------------------------------
     if (walkableSurfaces) {
       if (isGround) {
         walkableSurfaces.push({
@@ -333,40 +323,61 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
           minZ: bz - bDepth / 2, maxZ: bz + bDepth / 2
         });
       } else {
+        // 1. Left Wing Floor (Flats 1 & 2)
         walkableSurfaces.push({
           type: 'flat',
           y: y + 0.2,
-          minX: bx - bWidth / 2, maxX: bx + bWidth / 2,
-          minZ: bz - bDepth / 2, maxZ: bz + bDepth / 2,
-          holeMinX: bx - halfCorridor,
-          holeMaxX: bx + halfCorridor,
-          holeMinZ: bz - 2.8,
-          holeMaxZ: bz + 2.8
+          minX: bx - bWidth / 2, maxX: bx - halfCorridor,
+          minZ: bz - bDepth / 2, maxZ: bz + bDepth / 2
+        });
+
+        // 2. Right Wing Floor (Flats 3 & 4)
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx + halfCorridor, maxX: bx + bWidth / 2,
+          minZ: bz - bDepth / 2, maxZ: bz + bDepth / 2
+        });
+
+        // 3. North Corridor Hallway
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx - halfCorridor, maxX: bx + halfCorridor,
+          minZ: bz + 1.8, maxZ: bz + bDepth / 2
+        });
+
+        // 4. South Corridor Hallway
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx - halfCorridor, maxX: bx + halfCorridor,
+          minZ: bz - bDepth / 2, maxZ: bz - 1.8
+        });
+
+        // 5. Central Walkway (Right between elevator & stairs)
+        walkableSurfaces.push({
+          type: 'flat',
+          y: y + 0.2,
+          minX: bx - 0.6, maxX: bx + 0.6,
+          minZ: bz - 1.8, maxZ: bz + 1.8
         });
       }
     }
 
-    // -------------------------------------------------------------------------
-    // CENTRAL CORRIDOR RUNNER & CEILING LIGHTS
-    // -------------------------------------------------------------------------
-    makeBox(group, carpetCorridorMat, bx, y + 0.13, bz, 2.2, 0.02, bDepth - 1.0);
+    // Corridor Carpet Runner & Lights
+    makeBox(group, carpetCorridorMat, bx, y + 0.13, bz, 1.8, 0.02, bDepth - 1.0);
     createCeilingLight(bx, y + floorHeight - 0.1, bz - bDepth / 4, group);
     createCeilingLight(bx, y + floorHeight - 0.1, bz + bDepth / 4, group);
 
-    // -------------------------------------------------------------------------
-    // WALKABLE STAIRS IN CENTRAL CORE
-    // -------------------------------------------------------------------------
+    // Central Walkable Stairs
     buildWalkableStairs(group, stairX, y, stairZ, floorHeight, f, floors, colliders, walkableSurfaces);
 
-    // -------------------------------------------------------------------------
-    // EXTERIOR FACADE WALLS & WINDOWS
-    // -------------------------------------------------------------------------
+    // Facade Walls & Windows
     const wallH = floorHeight;
     const wy = y + wallH / 2;
 
-    // Front Wall (+Z)
     if (isGround) {
-      // Lobby street entrance
       makeBox(group, facadeMat, bx - bWidth / 3, wy, bz + bDepth / 2, bWidth / 3, wallH, wallThickness);
       makeBox(group, facadeMat, bx + bWidth / 3, wy, bz + bDepth / 2, bWidth / 3, wallH, wallThickness);
       makeBox(group, trimMat, bx, wy + wallH / 3, bz + bDepth / 2 + 1.2, 6.0, 0.25, 2.4);
@@ -376,12 +387,10 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
       makeBox(group, facadeMat, bx + bWidth / 2 - 0.5, wy, bz + bDepth / 2, 1.0, wallH, wallThickness);
     }
 
-    // Back Wall (-Z)
     makeBox(group, windowGlassMat, bx, wy, bz - bDepth / 2, bWidth - 2, wallH - 1.2, wallThickness);
     makeBox(group, facadeMat, bx - bWidth / 2 + 0.5, wy, bz - bDepth / 2, 1.0, wallH, wallThickness);
     makeBox(group, facadeMat, bx + bWidth / 2 - 0.5, wy, bz - bDepth / 2, 1.0, wallH, wallThickness);
 
-    // Left Wall (-X) & Right Wall (+X)
     makeBox(group, facadeMat, bx - bWidth / 2, wy, bz, wallThickness, wallH, bDepth);
     makeBox(group, facadeMat, bx + bWidth / 2, wy, bz, wallThickness, wallH, bDepth);
 
@@ -430,7 +439,7 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
     }
 
     // -------------------------------------------------------------------------
-    // 4 APARTMENT FLATS PER FLOOR ("2 on each side of the floor")
+    // 4 APARTMENT FLATS PER FLOOR
     // -------------------------------------------------------------------------
     const flatW = (bWidth - corridorWidth) / 2;
     const flatD = (bDepth - 1.0) / 2;
@@ -441,11 +450,8 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
     const backWingZ = bz - flatD / 2;
 
     if (isGround) {
-      // Ground Floor Lobby Features: Mailboxes, Concierge Desk & Plants
       const desk = makeBox(group, darkWoodPanelMat, bx - 1.5, y + 0.7, bz + 8.5, 3.2, 1.4, 1.2);
       makeBox(group, graniteCorniceMat, bx - 1.5, y + 1.42, bz + 8.5, 3.4, 0.05, 1.3);
-
-      // Mailboxes wall for all apartments
       makeBox(group, brassPlaqueMat, bx + 2.5, y + 1.8, bz + 7.5, 0.1, 1.8, 3.6);
 
       createSofa(bx + 1.5, y + 0.2, bz + 8.5, -Math.PI / 2, group, colliders, rand, null, interactionManager);
@@ -453,20 +459,12 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
       createPottedPlant(bx + 2.2, y + 0.2, bz + 10.5, group);
     }
 
-    // Flat 1: Front-Left (Apt 101, 201...)
     buildApartmentFlat(group, `${f + 1}01`, leftWingX, y, frontWingZ, flatW, flatD, true, true, colliders, rand, interactionManager);
-
-    // Flat 2: Back-Left (Apt 102, 202...)
     buildApartmentFlat(group, `${f + 1}02`, leftWingX, y, backWingZ, flatW, flatD, false, true, colliders, rand, interactionManager);
-
-    // Flat 3: Front-Right (Apt 103, 203...)
     buildApartmentFlat(group, `${f + 1}03`, rightWingX, y, frontWingZ, flatW, flatD, true, false, colliders, rand, interactionManager);
-
-    // Flat 4: Back-Right (Apt 104, 204...)
     buildApartmentFlat(group, `${f + 1}04`, rightWingX, y, backWingZ, flatW, flatD, false, false, colliders, rand, interactionManager);
   }
 
-  // Rooftop Infrastructure
   const roofY = groundY + floors * floorHeight;
   addRooftopInfrastructure(group, bx, roofY, bz, bWidth, bDepth, styleType, colliders, walkableSurfaces);
 
@@ -474,7 +472,7 @@ export function createBuilding(bx, bz, bWidth, bDepth, floors, heightAt, group, 
 }
 
 // -----------------------------------------------------------------------------
-// CENTERPIECE MAZE BANK SKYSCRAPER (15 FLOORS)
+// CENTERPIECE MAZE BANK SKYSCRAPER
 // -----------------------------------------------------------------------------
 export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkableSurfaces, interactionManager = null) {
   const groundY = heightAt(bx, bz);
@@ -488,7 +486,6 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x22242a, roughness: 0.6 });
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x4f86f7, roughness: 0.05, metalness: 0.9, transparent: true, opacity: 0.35 });
   const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.15 });
-  const neonBlueMat = new THREE.MeshBasicMaterial({ color: 0x00d4ff });
   const marbleMat = new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.25, metalness: 0.05 });
 
   const coreRadius = 2.0;
@@ -505,10 +502,8 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
     });
   }
 
-  // Grand Skyscraper Central Elevator
   const elevator = new Elevator(bx, bz, groundY, floorHeight, floors, group, colliders, walkableSurfaces, interactionManager, 4.5, 6.0);
 
-  // Build each floor
   for (let f = 0; f < floors; f++) {
     const y = groundY + f * floorHeight;
     const wy = y + floorHeight / 2;
@@ -543,7 +538,6 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       }
     }
 
-    // Outer Perimeter Wall Segments
     const wallW = (2 * Math.PI * radius) / segments + 0.4;
     for (let i = 0; i < segments; i++) {
       const isGroundDoor = (f === 0 && (
@@ -578,10 +572,8 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       }
     }
 
-    // Floor Suites
     const floorY = y + 0.2;
     if (f === 0) {
-      // Grand Reception Lobby
       const desk = makeBox(group, buildingMat, bx, floorY + 0.7, bz + 12, 8.0, 1.4, 1.6);
       makeBox(group, marbleMat, bx, floorY + 1.42, bz + 12, 8.2, 0.06, 1.7);
 
@@ -592,7 +584,6 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       createPottedPlant(bx - 8, floorY, bz + 9, group);
       createPottedPlant(bx + 8, floorY, bz + 9, group);
     } else {
-      // Partitioned Skyscraper Suites
       createOfficeSuite(bx - 11, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createTVUnit(bx - 14, floorY, bz, Math.PI / 2, group, colliders, null, interactionManager);
       createBedroomSuite(bx + 11, floorY, bz, -Math.PI / 2, group, colliders, null, interactionManager);
@@ -601,7 +592,6 @@ export function createRoundSkyscraper(bx, bz, heightAt, group, colliders, walkab
       createPottedPlant(bx + 12, floorY, bz + 6, group);
     }
 
-    // Rooftop Helipad on Floor 14
     if (f === floors - 1) {
       const roofY = y + floorHeight;
       makeBox(group, buildingMat, bx, roofY, bz, radius * 2, 0.6, radius * 2);
