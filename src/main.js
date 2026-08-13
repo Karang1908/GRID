@@ -20,7 +20,6 @@ import { RemotePlayer } from './player/RemotePlayer.js';
 import { NetworkClient } from './net/NetworkClient.js';
 import { BreakableTreeManager } from './world/breakableTrees.js';
 import { InteractionManager } from './world/interactions.js';
-import { FLOOR_INFO } from './world/elevator.js';
 import { SoundManager } from './audio/soundManager.js';
 import { EnvironmentManager } from './world/environment.js';
 import { NPCManager } from './world/npcManager.js';
@@ -130,7 +129,7 @@ function handleSpawnSupercar(player, spawnPos, color) {
   soundManager.startRadio();
 }
 
-const { elevator } = createCity(
+const { elevators = [] } = createCity(
   scene, heightAt, colliders, walkableSurfaces, treeManager, interactionManager, soundManager,
   (player) => {
     modifyMoney(-40);
@@ -149,20 +148,23 @@ createCampsite(scene, heightAt, colliders);
 const npcManager = new NPCManager(scene, heightAt, interactionManager, soundManager);
 npcManager.spawnCityNPCs();
 
-// --- Elevator UI Setup --------------------------------------------------------
+// --- Multi-Building Elevator UI Setup -----------------------------------------
 let elevatorUIVisible = false;
+let activeElevator = null;
 
-function buildElevatorUI(currentFloor) {
-  if (!elevatorFloorsContainer) return;
+function buildElevatorUI(currentFloor, elev) {
+  if (!elevatorFloorsContainer || !elev) return;
   elevatorFloorsContainer.innerHTML = '';
-  for (const fi of FLOOR_INFO) {
+  const floors = elev.getFloorInfo();
+
+  for (const fi of floors) {
     const btn = document.createElement('button');
     btn.className = 'elevator-floor-btn' + (fi.num === currentFloor ? ' current' : '');
     btn.innerHTML = `<span class="floor-num">${fi.num}</span>${fi.name}`;
     btn.addEventListener('click', () => {
-      if (elevator) {
+      if (activeElevator) {
         soundManager.playElevatorChime();
-        elevator.goToFloor(fi.num);
+        activeElevator.goToFloor(fi.num);
       }
     });
     elevatorFloorsContainer.appendChild(btn);
@@ -170,9 +172,10 @@ function buildElevatorUI(currentFloor) {
   if (elevatorCurrentFloorEl) elevatorCurrentFloorEl.textContent = currentFloor;
 }
 
-function showElevatorUI(currentFloor) {
+function showElevatorUI(currentFloor, elev) {
   elevatorUIVisible = true;
-  buildElevatorUI(currentFloor);
+  activeElevator = elev;
+  buildElevatorUI(currentFloor, elev);
   if (elevatorUI) elevatorUI.classList.add('visible');
   if (document.pointerLockElement) {
     document.exitPointerLock();
@@ -185,9 +188,9 @@ function hideElevatorUI() {
   pointerLock.requestLock();
 }
 
-if (elevator) {
-  elevator.onShowUI = showElevatorUI;
-  elevator.onHideUI = hideElevatorUI;
+for (const elev of elevators) {
+  elev.onShowUI = (floor, inst) => showElevatorUI(floor, inst || elev);
+  elev.onHideUI = hideElevatorUI;
 }
 
 // Spawn 4 Cars near Campsite
@@ -313,7 +316,7 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (e.key === 'Escape' && elevatorUIVisible) {
-    if (elevator) elevator.state = 'IDLE';
+    if (activeElevator) activeElevator.state = 'IDLE';
     hideElevatorUI();
   }
 });
@@ -575,9 +578,9 @@ function animate(now) {
   // Update dynamic physics particles and falling trees
   treeManager.update(dt);
 
-  // Update elevator
-  if (elevator) {
-    elevator.update(dt, localPlayer);
+  // Update all building elevators
+  for (const elev of elevators) {
+    elev.update(dt, localPlayer);
   }
 
   // Update camera rig
