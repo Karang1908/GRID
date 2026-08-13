@@ -12,7 +12,7 @@ import { MSG } from '../../shared/protocol.js';
 
 export class NetworkClient {
   constructor({
-    url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname || 'localhost'}:8080`,
+    url,
     onInit,
     onJoin,
     onState,
@@ -20,7 +20,16 @@ export class NetworkClient {
     onName,
     onStatusChange,
   } = {}) {
-    this.url = url;
+    const isHttps = location.protocol === 'https:';
+    const proto = isHttps ? 'wss' : 'ws';
+    
+    // Support Vite proxy /ws (for ngrok tunnels and HTTPS) and direct port 8080 fallback
+    this.urls = url ? [url] : [
+      `${proto}://${location.host}/ws`,
+      `${proto}://${location.hostname || 'localhost'}:8080`
+    ];
+    this.urlIndex = 0;
+
     this.onInit = onInit || (() => {});
     this.onJoin = onJoin || (() => {});
     this.onState = onState || (() => {});
@@ -31,15 +40,29 @@ export class NetworkClient {
     this.selfId = null;
     this.selfColor = null;
     this._reconnectT = null;
+    this._connectedOnce = false;
   }
 
   connect() {
     this.onStatusChange('connecting');
-    const ws = new WebSocket(this.url);
+    const targetUrl = this.urls[this.urlIndex % this.urls.length];
+    
+    let ws;
+    try {
+      ws = new WebSocket(targetUrl);
+    } catch (e) {
+      console.warn(`network: failed to create WebSocket for ${targetUrl}:`, e);
+      this._retryNext();
+      return;
+    }
+
     this.ws = ws;
+    
     ws.onopen = () => {
+      this._connectedOnce = true;
       this.onStatusChange('open');
     };
+
     ws.onmessage = (e) => {
       let msg;
       try {
@@ -50,18 +73,27 @@ export class NetworkClient {
       }
       this._dispatch(msg);
     };
+
     ws.onclose = () => {
       this.onStatusChange('closed');
       this.ws = null;
-      if (this._reconnectT) return;
-      this._reconnectT = setTimeout(() => {
-        this._reconnectT = null;
-        this.connect();
-      }, 2000);
+      this._retryNext();
     };
+
     ws.onerror = (e) => {
-      console.warn('network: socket error', e);
+      console.warn(`network: socket error on ${targetUrl}`, e);
     };
+  }
+
+  _retryNext() {
+    if (this._reconnectT) return;
+    this._reconnectT = setTimeout(() => {
+      this._reconnectT = null;
+      if (!this._connectedOnce) {
+        this.urlIndex++; // Try next fallback URL if never successfully connected
+      }
+      this.connect();
+    }, 1500);
   }
 
   _dispatch(msg) {
